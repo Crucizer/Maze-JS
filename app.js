@@ -14,21 +14,22 @@ class Node {
     }
 
     getNeighbors() {
-        neighbors = [];
+        let neighbors = [];
         if (this.y > 0) {
-            neighbors.push((y-1, x));
+            neighbors.push([this.y - 1, this.x]);
         }
         if (this.x > 0) {
-            neighbors.push((y, x-1));
+            neighbors.push([this.y, this.x - 1]);
         }
-        if(x< this.size -1 ) {
-            neighbors.push((y,x+1));
+        if (this.x < this.size - 1) {
+            neighbors.push([this.y, this.x + 1]);
         }
-        if (y < size -1) {
-            neighbors.push((y+1, x));
+        if (this.y < this.size - 1) {
+            neighbors.push([this.y + 1, this.x]);
         }
 
-        return neighbors;   
+        console.log(neighbors);
+        return neighbors;
     }
 }
 
@@ -36,15 +37,27 @@ class Maze {
     constructor(size) {
         this.size = size;
         this.maze = [];
+        this.bordersX = [];
+        this.bordersY = [];
 
-        // making the maze
+
+        // making the maze and border
         for(let i =0; i<this.size ; i++) {
             let row = [];
+            let borderRowX = [];
+            let borderRowY = [];
+
             for(let j=0;j<this.size; j++) {
                 row.push(new Node(i,j, this.size));
+                borderRowX.push(0);
+                borderRowY.push(0);
+
             }
             this.maze.push(row);
+            this.bordersX.push(borderRowX);
+            this.bordersY.push(borderRowY);
         } 
+
     }
 
     makeBoard() {
@@ -52,19 +65,29 @@ class Maze {
         // drawing the maze
         for (let i = 0; i<this.size; i++) {
             for (let j = 0; j<this.size; j++) {
-                console.log(this.maze[i][j].color);
+                if (this.maze[i][j].value === 0){
                 this.drawRect(this.cellSize*i, this.cellSize*j,this.maze[i][j].color);
+                }
+                else {
+                this.drawRect(this.cellSize*i, this.cellSize*j,"red");
+
+                }
+            
             }
         }
-        // drawing the borders
+    }
 
-        for (let i = 0; i <= this.size; i++) {
-            // Draw horizontal lines
-            this.drawLine(0, this.cellSize * i, canvas.width, this.cellSize * i);
-            // Draw vertical lines
-            this.drawLine(this.cellSize * i, 0, this.cellSize * i, canvas.height);
+    drawBorder() {
+        for (let i = 0; i < this.size; i++) {
+            for (let j = 0; j < this.size; j++) {
+                if (this.bordersX[i][j] === 0) {
+                    this.drawLine(j * this.cellSize, i * this.cellSize, (j + 1) * this.cellSize, i * this.cellSize);
+                }
+                if (this.bordersY[i][j] === 0) {
+                    this.drawLine(j * this.cellSize, i * this.cellSize, j * this.cellSize, (i + 1) * this.cellSize);
+                }
+            }
         }
-
     }
 
     drawLine(x1, y1, x2, y2) {
@@ -79,7 +102,47 @@ class Maze {
         ctx.fillRect(x,y, this.cellSize, this.cellSize);
 
     }
+
+    dfs_recur(y,x) {
+        this.maze[y][x].visited = true;
+        this.maze[y][x].value = 1;
+        let neighbors = this.shuffleArray(this.maze[y][x].getNeighbors());
+
+        for(let neighbor of neighbors) {
+            let ny = neighbor[0];
+            let nx = neighbor[1];
+            if (!this.maze[ny][nx].visited){
+                
+                if (ny === y) {
+                    // change in x direction
+                    this.bordersX[y][Math.min(x, nx)] = 1;
+                } else {
+                    // change in y direction
+                    this.bordersY[Math.min(y, ny)][x] = 1;
+                }
+
+                this.dfs_recur(ny, nx);
+
+                // draw borders
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                this.makeBoard();
+                this.drawBorder();
+
+
+            }
+        }
+    }
+
+    shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+
+        return array;
+    }
 }
 
 let Board = new Maze(10);
 Board.makeBoard();
+Board.dfs_recur(0,0);
